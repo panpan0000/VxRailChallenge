@@ -76,7 +76,8 @@ IPs_sorted=$(for l in ${IPs[@]}; do echo $l; done | sort)
 ######################################################
 # get all vXrail MAC List
 lldpcli  show neighbors |grep VxRail -B2|grep ChassisID |awk '{print $NF}' > /tmp/mac_list.txt
-
+# get all vXrail IP List
+lldpcli  show neighbors |grep VxRail -A1|grep MgmtIP |awk '{print $NF}' > /tmp/used_ip_list.txt
 
 # restart service
 if [ -f /tmp/IP_Pool_Input.txt ]
@@ -126,12 +127,20 @@ for l in ${IPs_sorted[@]};
 do
     if [ "$cnt" -eq "$RANK" ];
     then
-        MY_IP=$l
-        break
+        if [ "$(grep $l /tmp/used_ip_list.txt)" == "" ];
+        then
+              MY_IP=$l
+              break
+        fi
     fi
     let "cnt=cnt+1"
 done 
 
-echo My IP Should be : $MY_IP
+if [ $MY_IP  == "" ]
+then
+    echo "[Error]: Not IP avaiable for this node :-(  . exit "
+    exit -1
+fi
+echo "My IP Should be : $MY_IP ( run : sudo ifconfig $NIC $MY_IP  )"
 
-# ifconfig NIC $MY_IP
+# ifconfig $NIC $MY_IP
